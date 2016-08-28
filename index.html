@@ -1,0 +1,13 @@
+<html>
+ <head>
+  <meta charset="utf-8">
+  <title>Отправка файла на сервер</title>
+ </head>
+ <body>
+  <form action="/run" method="post" enctype="multipart/form-data">
+     <input type="file" name="tpl" accept="docx">
+     <input type="file" name="dict" accept="csv">
+     <input type="submit" value="Отправить">
+  </form>
+ </body>
+</html>

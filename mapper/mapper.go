@@ -1,8 +1,9 @@
-package main
+package mapper
 
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,28 +11,60 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"golang.org/x/text/encoding/charmap"
 )
 
-// MakeAppl makes populated docx file
-func MakeAppl(tpl io.Reader) (string, error) {
-	dictionary := map[string]string{
-		"DATE": "13.06.1994",
-		"NAME": "Igor",
+// MapValues show record from dictionary
+func MapValues(tpl io.Reader, dict io.Reader) error {
+	dec := charmap.Windows1251.NewDecoder()
+	decr := dec.Reader(dict)
+	csvr := csv.NewReader(decr)
+	csvr.Comma = ';'
+
+	var index int
+	var dictNames []string
+	dictionary := make(map[string]string)
+	b, err := ioutil.ReadAll(tpl)
+
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	pwd, err := os.Getwd()
 	tmpBase := filepath.Join(pwd, "localtemp")
-	tmpdir, err := ioutil.TempDir(tmpBase, "")
-	defer os.RemoveAll(tmpdir)
 
-	err = UnpackDocx(tpl, dictionary, tmpdir)
-	fn := tmpdir + "application.docx"
-	err = MakeDocx(tmpdir, fn)
+	for {
+		index++
+		record, err := csvr.Read()
+		if err != nil {
+			break
+		}
+		if index == 1 {
+			continue
+		}
+		if index == 2 {
+			dictNames = record
+			continue
+		}
+		for k, v := range dictNames {
+			dictionary[v] = record[k]
+		}
 
-	if err != nil {
-		return fmt.Sprintf("MakeAppl: %v", err), err
+		tmpdir, err := ioutil.TempDir(tmpBase, "")
+		defer os.RemoveAll(tmpdir)
+
+		err = UnpackDocx(b, dictionary, tmpdir)
+		if err != nil {
+			return err
+		}
+		fn := tmpdir + "application.docx"
+		err = MakeDocx(tmpdir, fn)
+		if err != nil {
+			return err
+		}
 	}
-	return fn, err
+	return err
 }
 
 // MakeDocx zip files from source to target
@@ -76,11 +109,7 @@ func MakeDocx(source, target string) error {
 }
 
 // UnpackDocx unzip and change files
-func UnpackDocx(r io.Reader, dict map[string]string, tmpdir string) error {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return fmt.Errorf("error reading data: %v", err)
-	}
+func UnpackDocx(b []byte, dict map[string]string, tmpdir string) error {
 	zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
 		return fmt.Errorf("error unzipping data: %v", err)
@@ -103,10 +132,22 @@ func UnpackDocx(r io.Reader, dict map[string]string, tmpdir string) error {
 		newName := filepath.Join(tmpdir, f.Name)
 
 		if f.Name == "word/document.xml" {
-			err = ChangeValues(fr, dict, newName)
+			b, err := ioutil.ReadAll(fr)
 			if err != nil {
-				return fmt.Errorf("error changing values: %v", err)
+				return err
 			}
+
+			s := string(b)
+			for k, v := range dict {
+				exp, _ := regexp.Compile("%" + k + "%")
+				indexes := exp.FindStringIndex(s)
+				if indexes == nil {
+					err = fmt.Errorf(k)
+				}
+				s = exp.ReplaceAllLiteralString(s, v)
+			}
+
+			ioutil.WriteFile(newName, []byte(s), 0777)
 		} else {
 			out, err := os.Create(newName)
 			defer out.Close()
@@ -121,24 +162,6 @@ func UnpackDocx(r io.Reader, dict map[string]string, tmpdir string) error {
 
 		}
 	}
-
-	return err
-}
-
-// ChangeValues in file by map
-func ChangeValues(r io.Reader, m map[string]string, outfn string) error {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	s := string(b)
-	for k, v := range m {
-		regexp, _ := regexp.Compile("%" + k + "%")
-		s = regexp.ReplaceAllLiteralString(s, v)
-	}
-
-	ioutil.WriteFile(outfn, []byte(s), 0777)
 
 	return err
 }
