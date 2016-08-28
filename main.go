@@ -45,10 +45,16 @@ func runMapper(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = mapper.MapValues(tpl, dict)
+	files, err := mapper.MapValues(tpl, dict)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	w.Header().Set("Content-Type", "text/html")
+	for k, v := range files {
+		fmt.Fprintf(w, "#%v %v \n", k+1, v)
+	}
+
 }
 
 func mainPage(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +67,7 @@ func mainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.Print("Start")
 	http.HandleFunc("/run", runMapper)
 	http.HandleFunc("/", mainPage)
 	err := http.ListenAndServe(":9090", nil)

@@ -2,12 +2,17 @@
  <head>
   <meta charset="utf-8">
   <title>Отправка файла на сервер</title>
+  <style media="screen">
+    form > * { padding: 10px; }
+  </style>
  </head>
  <body>
-  <form action="/run" method="post" enctype="multipart/form-data">
-     <input type="file" name="tpl" accept="docx">
-     <input type="file" name="dict" accept="csv">
-     <input type="submit" value="Отправить">
+  <form action="/run" method="post" enctype="multipart/form-data" style="text-align:center">
+    <span>DOCX: </span><br/>
+    <input type="file" name="tpl" accept="docx"/><br/>
+    <span>CSV: </span><br/>
+    <input type="file" name="dict" accept="csv"/><br/>
+    <input type="submit" value="Отправить">
   </form>
  </body>
 </html>

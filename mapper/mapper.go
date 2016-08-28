@@ -16,7 +16,7 @@ import (
 )
 
 // MapValues show record from dictionary
-func MapValues(tpl io.Reader, dict io.Reader) error {
+func MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
 	dec := charmap.Windows1251.NewDecoder()
 	decr := dec.Reader(dict)
 	csvr := csv.NewReader(decr)
@@ -33,6 +33,7 @@ func MapValues(tpl io.Reader, dict io.Reader) error {
 
 	pwd, err := os.Getwd()
 	tmpBase := filepath.Join(pwd, "localtemp")
+	var resFiles []string
 
 	for {
 		index++
@@ -56,15 +57,18 @@ func MapValues(tpl io.Reader, dict io.Reader) error {
 
 		err = UnpackDocx(b, dictionary, tmpdir)
 		if err != nil {
-			return err
+			return resFiles, err
 		}
 		fn := tmpdir + "application.docx"
 		err = MakeDocx(tmpdir, fn)
 		if err != nil {
-			return err
+			return resFiles, err
 		}
+
+		resFiles = append(resFiles, fn)
 	}
-	return err
+
+	return resFiles, err
 }
 
 // MakeDocx zip files from source to target
