@@ -57,21 +57,11 @@ func runMapper(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func mainPage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	b, err := ioutil.ReadFile("index.html")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Fprintf(w, string(b))
-}
-
 func main() {
 	log.Print("Start")
 	http.HandleFunc("/run", runMapper)
-	http.HandleFunc("/", mainPage)
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Fatal("ListenAndServe:9090 ", err)
 	}
 }
