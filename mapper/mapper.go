@@ -41,10 +41,10 @@ func MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
 		if err != nil {
 			break
 		}
-		if index == 1 {
+		if index == 0 {
 			continue
 		}
-		if index == 2 {
+		if index == 1 {
 			dictNames = record
 			continue
 		}

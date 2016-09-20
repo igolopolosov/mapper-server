@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -11,7 +10,7 @@ import (
 	"github.com/usehotkey/mapper/mapper"
 )
 
-func runMapper(w http.ResponseWriter, r *http.Request) {
+func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 	var (
 		status    int
 		err       error
@@ -23,14 +22,14 @@ func runMapper(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	const _24K = (1 << 20) * 24
-	if err = r.ParseMultipartForm(_24K); nil != err {
+	if err = r.ParseMultipartForm(_24K); err != nil  {
 		status = http.StatusInternalServerError
 		return
 	}
 	for name, fheaders := range r.MultipartForm.File {
 		for _, hdr := range fheaders {
 			var infile multipart.File
-			if infile, err = hdr.Open(); nil != err {
+			if infile, err = hdr.Open(); err != nil {
 				status = http.StatusInternalServerError
 				return
 			}
@@ -59,7 +58,7 @@ func runMapper(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	log.Print("Start")
-	http.HandleFunc("/run", runMapper)
+	http.HandleFunc("/csvtodocx", runCSVtoDOCX)
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe:9090 ", err)
