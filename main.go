@@ -44,7 +44,9 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	files, err := mapper.MapValues(tpl, dict)
+	m := mapper.MapperCSVtoDOCX{}
+
+	files, err := m.MapValues(tpl, dict)
 	if err != nil {
 		fmt.Println(err)
 	}

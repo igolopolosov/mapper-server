@@ -15,8 +15,23 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
+type Mapper interface {
+	MapValues(io.Reader, io.Reader) ([]string, error)
+}
+
+type MapperCSVtoDOCX struct {}
+
+type MapperJSONtoDOCX struct {}
+
+type HelperDOCX struct {}
+
+func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
+	return []string{"foo", "bar"}, nil
+}
+
 // MapValues show record from dictionary
-func MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
+func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
+	helper := HelperDOCX{}
 	dec := charmap.Windows1251.NewDecoder()
 	decr := dec.Reader(dict)
 	csvr := csv.NewReader(decr)
@@ -55,12 +70,12 @@ func MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
 		defer os.RemoveAll(tmpdir)
 
-		err = UnpackDocx(b, dictionary, tmpdir)
+		err = helper.UnpackDocx(b, dictionary, tmpdir)
 		if err != nil {
 			return resFiles, err
 		}
 		fn := tmpdir + "application.docx"
-		err = MakeDocx(tmpdir, fn)
+		err = helper.MakeDocx(tmpdir, fn)
 		if err != nil {
 			return resFiles, err
 		}
@@ -72,7 +87,7 @@ func MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
 }
 
 // MakeDocx zip files from source to target
-func MakeDocx(source, target string) error {
+func (h HelperDOCX) MakeDocx(source, target string) error {
 	docxFile, err := os.Create(target)
 	if err != nil {
 		return err
@@ -113,7 +128,7 @@ func MakeDocx(source, target string) error {
 }
 
 // UnpackDocx unzip and change files
-func UnpackDocx(b []byte, dict map[string]string, tmpdir string) error {
+func (h HelperDOCX) UnpackDocx(b []byte, dict map[string]string, tmpdir string) error {
 	zr, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
 		return fmt.Errorf("error unzipping data: %v", err)
