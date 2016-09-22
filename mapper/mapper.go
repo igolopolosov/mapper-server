@@ -43,7 +43,7 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 	b, err := ioutil.ReadAll(tpl)
 
 	if err != nil {
-		fmt.Println(err)
+		return []string{}, err
 	}
 
 	pwd, err := os.Getwd()
