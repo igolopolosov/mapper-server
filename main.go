@@ -16,6 +16,8 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		status    int
 		err       error
 		tpl, dict io.Reader
+		tplType, dictType string
+		m mapper.Mapper
 	)
 
 	defer func() {
@@ -38,10 +40,17 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 
 			if name == "tpl" && strings.Contains(hdr.Filename, ".docx") {
 				tpl = infile
+				tplType = "DOCX"
 			}
 
 			if name == "dict" && strings.Contains(hdr.Filename, ".csv") {
 				dict = infile
+				dictType = "CSV"
+			}
+
+			if name == "dict" && strings.Contains(hdr.Filename, ".json") {
+				dict = infile
+				dictType = "JSON"
 			}
 		}
 	}
@@ -53,7 +62,13 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 
-	m := mapper.MapperCSVtoDOCX{}
+	if tplType == "DOCX" && dictType == "CSV" {
+		m = mapper.MapperCSVtoDOCX{}
+	}
+
+	if tplType == "DOCX" && dictType == "JSON" {
+		m = mapper.MapperJSONtoDOCX{}
+	}
 
 	files, err := m.MapValues(tpl, dict)
 	if err != nil {
@@ -69,7 +84,7 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	log.Print("Start")
-	http.HandleFunc("/csvtodocx", runCSVtoDOCX)
+	http.HandleFunc("/map", runCSVtoDOCX)
 	err := http.ListenAndServe(":9090", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe:9090 ", err)

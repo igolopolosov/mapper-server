@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,7 +27,38 @@ type MapperJSONtoDOCX struct {}
 type HelperDOCX struct {}
 
 func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
-	return []string{"foo", "bar"}, nil
+	helper := HelperDOCX{}
+	var f []map[string]string
+	dictBytes, err := ioutil.ReadAll(dict)
+	err = json.Unmarshal(dictBytes, &f)
+	tplBytes, err := ioutil.ReadAll(tpl)
+
+	if err != nil {
+		return []string{}, err
+	}
+
+	pwd, err := os.Getwd()
+	tmpBase := filepath.Join(pwd, "localtemp")
+	var resFiles []string
+
+	for _, record := range f {
+		tmpdir, err := ioutil.TempDir(tmpBase, "")
+		defer os.RemoveAll(tmpdir)
+
+		err = helper.UnpackDocx(tplBytes, record, tmpdir)
+		if err != nil {
+			return resFiles, err
+		}
+		fn := tmpdir + "application.docx"
+		err = helper.MakeDocx(tmpdir, fn)
+		if err != nil {
+			return resFiles, err
+		}
+
+		resFiles = append(resFiles, fn)
+	}
+
+	return resFiles, err
 }
 
 // MapValues show record from dictionary
@@ -63,6 +95,7 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 			dictNames = record
 			continue
 		}
+
 		for k, v := range dictNames {
 			dictionary[v] = record[k]
 		}
