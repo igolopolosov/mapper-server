@@ -37,28 +37,7 @@ func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, er
 		return []string{}, err
 	}
 
-	pwd, err := os.Getwd()
-	tmpBase := filepath.Join(pwd, "localtemp")
-	var resFiles []string
-
-	for _, record := range f {
-		tmpdir, err := ioutil.TempDir(tmpBase, "")
-		defer os.RemoveAll(tmpdir)
-
-		err = helper.UnpackDocx(tplBytes, record, tmpdir)
-		if err != nil {
-			return resFiles, err
-		}
-		fn := tmpdir + "application.docx"
-		err = helper.MakeDocx(tmpdir, fn)
-		if err != nil {
-			return resFiles, err
-		}
-
-		resFiles = append(resFiles, fn)
-	}
-
-	return resFiles, err
+	return helper.GenerateArchiveDOCX(tplBytes, f)
 }
 
 // MapValues show record from dictionary
@@ -71,20 +50,13 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 
 	var index int
 	var dictNames []string
-	dictionary := make(map[string]string)
-	b, err := ioutil.ReadAll(tpl)
+	var dictionary []map[string]string
+	record := make(map[string]string)
 
-	if err != nil {
-		return []string{}, err
-	}
-
-	pwd, err := os.Getwd()
-	tmpBase := filepath.Join(pwd, "localtemp")
-	var resFiles []string
 
 	for {
 		index++
-		record, err := csvr.Read()
+		row, err := csvr.Read()
 		if err != nil {
 			break
 		}
@@ -92,23 +64,40 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 			continue
 		}
 		if index == 1 {
-			dictNames = record
+			dictNames = row
 			continue
 		}
 
 		for k, v := range dictNames {
-			dictionary[v] = record[k]
+			record[v] = row[k]
 		}
 
+		dictionary = append(dictionary, record)
+	}
+
+	tplBytes, err := ioutil.ReadAll(tpl)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return helper.GenerateArchiveDOCX(tplBytes, dictionary)
+}
+
+func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) ([]string, error) {
+	pwd, err := os.Getwd()
+	tmpBase := filepath.Join(pwd, "localtemp")
+	var resFiles []string
+
+	for _, record := range dict {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
 		defer os.RemoveAll(tmpdir)
 
-		err = helper.UnpackDocx(b, dictionary, tmpdir)
+		err = helper.UnpackDocx(tpl, record, tmpdir)
 		if err != nil {
 			return resFiles, err
 		}
 		fn := tmpdir + "application.docx"
-		err = helper.MakeDocx(tmpdir, fn)
+		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
 			return resFiles, err
 		}
@@ -120,7 +109,7 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 }
 
 // MakeDocx zip files from source to target
-func (h HelperDOCX) MakeDocx(source, target string) error {
+func (h HelperDOCX) GenerateSingleDocx(source, target string) error {
 	docxFile, err := os.Create(target)
 	if err != nil {
 		return err
