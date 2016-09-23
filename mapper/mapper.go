@@ -17,7 +17,7 @@ import (
 )
 
 type Mapper interface {
-	MapValues(io.Reader, io.Reader) ([]string, error)
+	MapValues(io.Reader, io.Reader) (string, error)
 }
 
 type MapperCSVtoDOCX struct {}
@@ -26,7 +26,7 @@ type MapperJSONtoDOCX struct {}
 
 type HelperDOCX struct {}
 
-func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
+func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
 	helper := HelperDOCX{}
 	var f []map[string]string
 	dictBytes, err := ioutil.ReadAll(dict)
@@ -34,14 +34,14 @@ func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, er
 	tplBytes, err := ioutil.ReadAll(tpl)
 
 	if err != nil {
-		return []string{}, err
+		return "", err
 	}
 
 	return helper.GenerateArchiveDOCX(tplBytes, f)
 }
 
 // MapValues show record from dictionary
-func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, error) {
+func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
 	helper := HelperDOCX{}
 	dec := charmap.Windows1251.NewDecoder()
 	decr := dec.Reader(dict)
@@ -52,7 +52,6 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 	var dictNames []string
 	var dictionary []map[string]string
 	record := make(map[string]string)
-
 
 	for {
 		index++
@@ -77,16 +76,29 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) ([]string, err
 
 	tplBytes, err := ioutil.ReadAll(tpl)
 	if err != nil {
-		return []string{}, err
+		return "", err
 	}
 
 	return helper.GenerateArchiveDOCX(tplBytes, dictionary)
 }
 
-func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) ([]string, error) {
+func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
 	pwd, err := os.Getwd()
 	tmpBase := filepath.Join(pwd, "localtemp")
 	var resFiles []string
+
+	tmpdir, err := ioutil.TempDir(tmpBase, "")
+	zipFilename := tmpdir + ".zip"
+	defer os.RemoveAll(tmpdir)
+
+	newfile, err := os.Create(zipFilename)
+	if err != nil {
+		return "", err
+	}
+	defer newfile.Close()
+
+  zwriter := zip.NewWriter(newfile)
+	defer zwriter.Close()
 
 	for _, record := range dict {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
@@ -94,18 +106,42 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 
 		err = helper.UnpackDocx(tpl, record, tmpdir)
 		if err != nil {
-			return resFiles, err
+			return "", err
 		}
 		fn := tmpdir + "application.docx"
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
-			return resFiles, err
+			return "", err
 		}
+
+		zippingFile, err := os.Open(fn)
+		if err != nil {
+			return "", err
+		}
+		defer os.RemoveAll(fn)
+		defer zippingFile.Close()
+
+		info, err := zippingFile.Stat()
+		if err != nil {
+			return "", err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return "", err
+		}
+
+		writer, err := zwriter.CreateHeader(header)
+		if err != nil {
+			return "", err
+		}
+
+		_, err = io.Copy(writer, zippingFile)
 
 		resFiles = append(resFiles, fn)
 	}
 
-	return resFiles, err
+	return zipFilename, err
 }
 
 // MakeDocx zip files from source to target

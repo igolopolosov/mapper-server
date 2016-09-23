@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"os"
 	"io"
 	"log"
 	"mime/multipart"
+	"path/filepath"
 	"net/http"
 	"strings"
 
@@ -70,16 +71,16 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		m = mapper.MapperJSONtoDOCX{}
 	}
 
-	files, err := m.MapValues(tpl, dict)
+	zipName, err := m.MapValues(tpl, dict)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
 
-	for k, v := range files {
-		fmt.Fprintf(w, "#%v %v \n", k+1, v)
-	}
-
+	w.Header().Set("Content-type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(zipName))
+	http.ServeFile(w, r, zipName)
+	defer os.RemoveAll(zipName)
 }
 
 func main() {
