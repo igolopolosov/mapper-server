@@ -1,1 +1,1 @@
-web: mapper -port=9090
+web: mapper
