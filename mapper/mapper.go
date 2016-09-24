@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"strconv"
 
 	"golang.org/x/text/encoding/charmap"
 )
@@ -51,7 +52,6 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 	var index int
 	var dictNames []string
 	var dictionary []map[string]string
-	record := make(map[string]string)
 
 	for {
 		index++
@@ -67,6 +67,7 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 			continue
 		}
 
+		record := make(map[string]string)
 		for k, v := range dictNames {
 			record[v] = row[k]
 		}
@@ -84,7 +85,6 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 
 func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
 	tmpBase, err := ioutil.TempDir("", "operation")
-	fmt.Println(tmpBase)
 	defer os.RemoveAll(tmpBase)
 	var resFiles []string
 
@@ -101,7 +101,7 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
   zwriter := zip.NewWriter(newfile)
 	defer zwriter.Close()
 
-	for _, record := range dict {
+	for key, record := range dict {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
 		defer os.RemoveAll(tmpdir)
 
@@ -110,7 +110,7 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 		if err != nil {
 			return "", err
 		}
-		fn := tmpdir + "application.docx"
+		fn := filepath.Dir(tmpdir) + "/#" + strconv.Itoa(key + 1) + "_document.docx"
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
 			return "", err
