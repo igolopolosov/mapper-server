@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"strconv"
 
 	"golang.org/x/text/encoding/charmap"
 )
@@ -51,7 +52,6 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 	var index int
 	var dictNames []string
 	var dictionary []map[string]string
-	record := make(map[string]string)
 
 	for {
 		index++
@@ -67,6 +67,7 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 			continue
 		}
 
+		record := make(map[string]string)
 		for k, v := range dictNames {
 			record[v] = row[k]
 		}
@@ -83,14 +84,13 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 }
 
 func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
-	pwd, err := ioutil.TempDir("","operation")
-	defer os.RemoveAll(pwd)
+	tmpBase, err := ioutil.TempDir("", "operation")
+	defer os.RemoveAll(tmpBase)
 	var resFiles []string
 
-	zipdir, err := ioutil.TempDir(pwd, "")
-	defer os.RemoveAll(zipdir)
+	zipdir, err := ioutil.TempDir("", "zip")
 	zipFilename := zipdir + ".zip"
-	fmt.Println("zip ", zipdir)
+	defer os.RemoveAll(zipdir)
 
 	newfile, err := os.Create(zipFilename)
 	if err != nil {
@@ -102,16 +102,17 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 	defer zwriter.Close()
 
 	for key, record := range dict {
-		tmpdir, err := ioutil.TempDir(pwd, "")
+		tmpdir, err := ioutil.TempDir(tmpBase, "")
 		defer os.RemoveAll(tmpdir)
 
 		fmt.Println("temp: ", key, tmpdir)
 
 		err = helper.UnpackDocx(tpl, record, tmpdir)
+
 		if err != nil {
 			return "", err
 		}
-		fn := tmpdir + "application.docx"
+		fn := filepath.Dir(tmpdir) + "/#" + strconv.Itoa(key + 1) + "_document.docx"
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
 			return "", err
@@ -219,7 +220,7 @@ func (h HelperDOCX) UnpackDocx(b []byte, dict map[string]string, tmpdir string) 
 
 			s := string(b)
 			for k, v := range dict {
-				exp, _ := regexp.Compile("%" + k + "%")
+				exp, _ := regexp.Compile("x" + k + "x")
 				indexes := exp.FindStringIndex(s)
 				if indexes == nil {
 					err = fmt.Errorf(k)
