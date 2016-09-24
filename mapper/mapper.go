@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"strconv"
 
 	"golang.org/x/text/encoding/charmap"
@@ -91,7 +90,7 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 	zipdir, err := ioutil.TempDir("", "zip")
 	zipFilename := filepath.Join(zipdir, "result.zip")
 
-	fmt.Println(tmpBase, zipFilename, zipdir)
+	//fmt.Println(tmpBase, zipFilename, zipdir)
 
 	newfile, err := os.Create(zipFilename)
 	if err != nil {
@@ -111,7 +110,7 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 		}
 		fn := filepath.Join(tmpBase, "#" + strconv.Itoa(key + 1) + "_document.docx")
 
-		fmt.Println(tmpdir, fn)
+		//fmt.Println(tmpdir, fn)
 
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
@@ -169,8 +168,10 @@ func (h HelperDOCX) GenerateSingleDocx(source, target string) error {
 			return err
 		}
 
-		header.Name = filepath.Join("", strings.TrimPrefix(path, source+"\\"))
+		header.Name, err = filepath.Rel(source, path)
 		header.Method = zip.Deflate
+
+		//fmt.Println("MY", header.Name, path, source)
 
 		writer, err := archive.CreateHeader(header)
 		if err != nil {
