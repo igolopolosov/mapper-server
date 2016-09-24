@@ -22,6 +22,7 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 	)
 
 	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	defer func() {
 		if nil != err {
@@ -59,7 +60,7 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if (tpl == nil || dict == nil) {
-		http.Error(w, "Incorrect file types", 500)
+		http.Error(w, "Некорретный тип прикреплённых файлов", 500)
     return
 	}
 
@@ -77,7 +78,6 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(zipName))
 	http.ServeFile(w, r, zipName)
@@ -92,3 +92,12 @@ func main() {
 		log.Fatal("ListenAndServe:" + os.Getenv("PORT"), err)
 	}
 }
+
+// func main() {
+// 	log.Print("Start on:9090")
+// 	http.HandleFunc("/map", runCSVtoDOCX)
+// 	err := http.ListenAndServe(":9090", nil)
+// 	if err != nil {
+// 		log.Fatal("ListenAndServe:9090", err)
+// 	}
+// }

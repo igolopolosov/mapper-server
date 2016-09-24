@@ -88,7 +88,10 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 	defer os.RemoveAll(tmpBase)
 	var resFiles []string
 
-	zipFilename := filepath.Join(tmpBase, "result.zip")
+	zipdir, err := ioutil.TempDir("", "zip")
+	zipFilename := filepath.Join(zipdir, "result.zip")
+
+	fmt.Println(tmpBase, zipFilename, zipdir)
 
 	newfile, err := os.Create(zipFilename)
 	if err != nil {
@@ -101,16 +104,14 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 
 	for key, record := range dict {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
-		defer os.RemoveAll(tmpdir)
-
 		err = helper.UnpackDocx(tpl, record, tmpdir)
 
 		if err != nil {
 			return "", err
 		}
-		fn := filepath.Join(filepath.Dir(tmpBase), "#" + strconv.Itoa(key + 1) + "_document.docx")
+		fn := filepath.Join(tmpBase, "#" + strconv.Itoa(key + 1) + "_document.docx")
 
-		fmt.Println(fn, )
+		fmt.Println(tmpdir, fn)
 
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
