@@ -21,6 +21,8 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		m mapper.Mapper
 	)
 
+	w.Header().Set("Content-Type", "text/html")
+
 	defer func() {
 		if nil != err {
 			http.Error(w, err.Error(), status)
@@ -61,8 +63,6 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
     return
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-
 	if tplType == "DOCX" && dictType == "CSV" {
 		m = mapper.MapperCSVtoDOCX{}
 	}
@@ -77,6 +77,7 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Content-type", "application/zip")
 	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(zipName))
 	http.ServeFile(w, r, zipName)
