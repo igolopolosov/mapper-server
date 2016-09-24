@@ -216,7 +216,7 @@ func (h HelperDOCX) UnpackDocx(b []byte, dict map[string]string, tmpdir string) 
 
 			s := string(b)
 			for k, v := range dict {
-				exp, _ := regexp.Compile("%" + k + "%")
+				exp, _ := regexp.Compile("x" + k + "x")
 				indexes := exp.FindStringIndex(s)
 				if indexes == nil {
 					err = fmt.Errorf(k)
