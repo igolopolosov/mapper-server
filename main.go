@@ -23,6 +23,12 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "origin, x-requested-with, content-type")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+
+	if r.Method == "OPTIONS" {
+		return
+	}
 
 	defer func() {
 		if nil != err {
