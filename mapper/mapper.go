@@ -85,11 +85,12 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
 	pwd, err := ioutil.TempDir("","operation")
 	defer os.RemoveAll(pwd)
-	tmpBase := filepath.Join(pwd, "localtemp")
 	var resFiles []string
 
-	tmpdir, err := ioutil.TempDir(tmpBase, "")
-	zipFilename := tmpdir + ".zip"
+	zipdir, err := ioutil.TempDir(pwd, "")
+	defer os.RemoveAll(zipdir)
+	zipFilename := zipdir + ".zip"
+	fmt.Println("zip ", zipdir)
 
 	newfile, err := os.Create(zipFilename)
 	if err != nil {
@@ -100,9 +101,11 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
   zwriter := zip.NewWriter(newfile)
 	defer zwriter.Close()
 
-	for _, record := range dict {
-		tmpdir, err := ioutil.TempDir(tmpBase, "")
+	for key, record := range dict {
+		tmpdir, err := ioutil.TempDir(pwd, "")
 		defer os.RemoveAll(tmpdir)
+
+		fmt.Println("temp: ", key, tmpdir)
 
 		err = helper.UnpackDocx(tpl, record, tmpdir)
 		if err != nil {
