@@ -1,4 +1,27 @@
 {
-    "ImportPath": "github.com/usehotkey/mapper",
-    "GoVersion": "go1.6.2"
-  }
+	"ImportPath": "github.com/usehotkey/mapper",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "golang.org/x/text/encoding",
+			"Rev": "2df9074612f50810d82416d2229398a1e7188c5c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/charmap",
+			"Rev": "2df9074612f50810d82416d2229398a1e7188c5c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/internal",
+			"Rev": "2df9074612f50810d82416d2229398a1e7188c5c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/encoding/internal/identifier",
+			"Rev": "2df9074612f50810d82416d2229398a1e7188c5c"
+		},
+		{
+			"ImportPath": "golang.org/x/text/transform",
+			"Rev": "2df9074612f50810d82416d2229398a1e7188c5c"
+		}
+	]
+}
