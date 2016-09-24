@@ -28,16 +28,16 @@ type HelperDOCX struct {}
 
 func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
 	helper := HelperDOCX{}
-	var f []map[string]string
+	var jsonMap []map[string]string
 	dictBytes, err := ioutil.ReadAll(dict)
-	err = json.Unmarshal(dictBytes, &f)
+	err = json.Unmarshal(dictBytes, &jsonMap)
 	tplBytes, err := ioutil.ReadAll(tpl)
 
 	if err != nil {
 		return "", err
 	}
 
-	return helper.GenerateArchiveDOCX(tplBytes, f)
+	return helper.GenerateArchiveDOCX(tplBytes, jsonMap)
 }
 
 // MapValues show record from dictionary
