@@ -84,10 +84,10 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Print("Start")
+	log.Print("Start on:" + os.Getenv("PORT"))
 	http.HandleFunc("/map", runCSVtoDOCX)
-	err := http.ListenAndServe(":9090", nil)
+	err := http.ListenAndServe(":" + os.Getenv("PORT"), nil)
 	if err != nil {
-		log.Fatal("ListenAndServe:9090 ", err)
+		log.Fatal("ListenAndServe:" + os.Getenv("PORT"), err)
 	}
 }
