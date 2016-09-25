@@ -5,9 +5,9 @@ import (
 	"io"
 	"log"
 	"mime/multipart"
-	"path/filepath"
 	"net/http"
 	"strings"
+	"path/filepath"
 
 	"github.com/usehotkey/mapper/mapper"
 )
@@ -20,6 +20,9 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		tplType, dictType string
 		m mapper.Mapper
 	)
+
+	dictName := "mapperResult.ext"
+	tplName := "document.ext"
 
 	w.Header().Set("Content-Type", "text/html")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -50,16 +53,25 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 
 			if name == "tpl" && strings.Contains(hdr.Filename, ".docx") {
 				tpl = infile
+				if len(hdr.Filename) > 0 {
+					tplName = hdr.Filename
+				}
 				tplType = "DOCX"
 			}
 
 			if name == "dict" && strings.Contains(hdr.Filename, ".csv") {
 				dict = infile
+				if len(hdr.Filename) > 0 {
+					dictName = hdr.Filename
+				}
 				dictType = "CSV"
 			}
 
 			if name == "dict" && strings.Contains(hdr.Filename, ".json") {
 				dict = infile
+				if len(hdr.Filename) > 0 {
+					dictName = hdr.Filename
+				}
 				dictType = "JSON"
 			}
 		}
@@ -78,14 +90,18 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 		m = mapper.MapperJSONtoDOCX{}
 	}
 
-	zipName, err := m.MapValues(tpl, dict)
+	zipName, err := m.MapValues(tpl, dict, tplName)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
 
 	w.Header().Set("Content-type", "application/zip")
-	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(zipName))
+
+	var extension = filepath.Ext(dictName)
+	dictName = dictName[0:len(dictName)-len(extension)]
+	w.Header().Set("Content-Disposition", "attachment; filename=" + filepath.Base(dictName) + ".zip")
+
 	http.ServeFile(w, r, zipName)
 	defer os.RemoveAll(zipName)
 }

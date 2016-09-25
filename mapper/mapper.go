@@ -17,16 +17,20 @@ import (
 )
 
 type Mapper interface {
-	MapValues(io.Reader, io.Reader) (string, error)
+	MapValues(io.Reader, io.Reader, string) (string, error)
 }
 
-type MapperCSVtoDOCX struct {}
+type MapperCSVtoDOCX struct {
+	tplName string
+}
 
-type MapperJSONtoDOCX struct {}
+type MapperJSONtoDOCX struct {
+	tplName string
+}
 
 type HelperDOCX struct {}
 
-func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
+func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader, tplName string) (string, error) {
 	helper := HelperDOCX{}
 	var jsonMap []map[string]string
 	dictBytes, err := ioutil.ReadAll(dict)
@@ -37,11 +41,11 @@ func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, erro
 		return "", err
 	}
 
-	return helper.GenerateArchiveDOCX(tplBytes, jsonMap)
+	return helper.GenerateArchiveDOCX(tplBytes, jsonMap, tplName)
 }
 
 // MapValues show record from dictionary
-func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
+func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader, tplName string) (string, error) {
 	helper := HelperDOCX{}
 	dec := charmap.Windows1251.NewDecoder()
 	decr := dec.Reader(dict)
@@ -79,10 +83,10 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 		return "", err
 	}
 
-	return helper.GenerateArchiveDOCX(tplBytes, dictionary)
+	return helper.GenerateArchiveDOCX(tplBytes, dictionary, tplName)
 }
 
-func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
+func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string, tplName string) (string, error) {
 	tmpBase, err := ioutil.TempDir("", "operation")
 	defer os.RemoveAll(tmpBase)
 	var resFiles []string
@@ -108,7 +112,17 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 		if err != nil {
 			return "", err
 		}
-		fn := filepath.Join(tmpBase, "#" + strconv.Itoa(key + 1) + "_document.docx")
+
+		var docName = "document"
+
+		if len(tplName) > 0 {
+			docName = tplName
+		}
+
+		var extension = filepath.Ext(docName)
+		docName = docName[0:len(docName)-len(extension)]
+
+		fn := filepath.Join(tmpBase, "#" + strconv.Itoa(key + 1) + "_" + docName + ".docx")
 
 		//fmt.Println(tmpdir, fn)
 
