@@ -12,7 +12,7 @@ import (
 	"github.com/usehotkey/mapper/mapper"
 )
 
-func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
+func runMap(w http.ResponseWriter, r *http.Request) {
 	var (
 		status    int
 		err       error
@@ -106,9 +106,53 @@ func runCSVtoDOCX(w http.ResponseWriter, r *http.Request) {
 	defer os.RemoveAll(zipName)
 }
 
+func runAnswer(w http.ResponseWriter, r *http.Request) {
+	var (
+		err       error
+		tpl, dict io.Reader
+		m mapper.Mapper
+	)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "origin, x-requested-with, content-type")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+
+	if r.Method == "OPTIONS" {
+		return
+	}
+
+	m = mapper.MapperJSONtoDOCX{}
+
+	tpl, err = os.Open("tpl.docx")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	dict, err = os.Open("dict.json")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	zipName, err := m.MapValues(tpl, dict, "answer.docx")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=archive.zip")
+
+	http.ServeFile(w, r, zipName)
+	// defer os.RemoveAll(zipName)
+}
+
 func main() {
 	log.Print("Start on:" + os.Getenv("PORT"))
-	http.HandleFunc("/map", runCSVtoDOCX)
+	http.HandleFunc("/map", runMap)
+	http.HandleFunc("/answer", runAnswer)
 	err := http.ListenAndServe(":" + os.Getenv("PORT"), nil)
 	if err != nil {
 		log.Fatal("ListenAndServe:" + os.Getenv("PORT"), err)
@@ -117,7 +161,8 @@ func main() {
 
 // func main() {
 // 	log.Print("Start on:9090")
-// 	http.HandleFunc("/map", runCSVtoDOCX)
+// 	http.HandleFunc("/map", runMap)
+// 	http.HandleFunc("/answer", runAnswer)
 // 	err := http.ListenAndServe(":9090", nil)
 // 	if err != nil {
 // 		log.Fatal("ListenAndServe:9090", err)
