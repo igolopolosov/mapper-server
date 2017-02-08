@@ -11,23 +11,26 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"strconv"
 
 	"golang.org/x/text/encoding/charmap"
 )
 
 type Mapper interface {
-	MapValues(io.Reader, io.Reader) (string, error)
+	MapValues(io.Reader, io.Reader, string) (string, error)
 }
 
-type MapperCSVtoDOCX struct {}
+type MapperCSVtoDOCX struct {
+	tplName string
+}
 
-type MapperJSONtoDOCX struct {}
+type MapperJSONtoDOCX struct {
+	tplName string
+}
 
 type HelperDOCX struct {}
 
-func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
+func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader, tplName string) (string, error) {
 	helper := HelperDOCX{}
 	var jsonMap []map[string]string
 	dictBytes, err := ioutil.ReadAll(dict)
@@ -38,11 +41,11 @@ func (m MapperJSONtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, erro
 		return "", err
 	}
 
-	return helper.GenerateArchiveDOCX(tplBytes, jsonMap)
+	return helper.GenerateArchiveDOCX(tplBytes, jsonMap, tplName)
 }
 
 // MapValues show record from dictionary
-func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error) {
+func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader, tplName string) (string, error) {
 	helper := HelperDOCX{}
 	dec := charmap.Windows1251.NewDecoder()
 	decr := dec.Reader(dict)
@@ -80,17 +83,18 @@ func (m MapperCSVtoDOCX) MapValues(tpl io.Reader, dict io.Reader) (string, error
 		return "", err
 	}
 
-	return helper.GenerateArchiveDOCX(tplBytes, dictionary)
+	return helper.GenerateArchiveDOCX(tplBytes, dictionary, tplName)
 }
 
-func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string) (string, error) {
+func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]string, tplName string) (string, error) {
 	tmpBase, err := ioutil.TempDir("", "operation")
 	defer os.RemoveAll(tmpBase)
 	var resFiles []string
 
 	zipdir, err := ioutil.TempDir("", "zip")
-	zipFilename := zipdir + ".zip"
-	defer os.RemoveAll(zipdir)
+	zipFilename := filepath.Join(zipdir, "result.zip")
+
+	//fmt.Println(tmpBase, zipFilename, zipdir)
 
 	newfile, err := os.Create(zipFilename)
 	if err != nil {
@@ -103,14 +107,25 @@ func (helper HelperDOCX) GenerateArchiveDOCX(tpl []byte, dict []map[string]strin
 
 	for key, record := range dict {
 		tmpdir, err := ioutil.TempDir(tmpBase, "")
-		defer os.RemoveAll(tmpdir)
-
 		err = helper.UnpackDocx(tpl, record, tmpdir)
 
 		if err != nil {
 			return "", err
 		}
-		fn := filepath.Dir(tmpdir) + "/#" + strconv.Itoa(key + 1) + "_document.docx"
+
+		var docName = "document"
+
+		if len(tplName) > 0 {
+			docName = tplName
+		}
+
+		var extension = filepath.Ext(docName)
+		docName = docName[0:len(docName)-len(extension)]
+
+		fn := filepath.Join(tmpBase, "#" + strconv.Itoa(key + 1) + "_" + docName + ".docx")
+
+		//fmt.Println(tmpdir, fn)
+
 		err = helper.GenerateSingleDocx(tmpdir, fn)
 		if err != nil {
 			return "", err
@@ -167,8 +182,10 @@ func (h HelperDOCX) GenerateSingleDocx(source, target string) error {
 			return err
 		}
 
-		header.Name = filepath.Join("", strings.TrimPrefix(path, source+"\\"))
+		header.Name, err = filepath.Rel(source, path)
 		header.Method = zip.Deflate
+
+		//fmt.Println("MY", header.Name, path, source)
 
 		writer, err := archive.CreateHeader(header)
 		if err != nil {
